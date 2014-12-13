@@ -63,25 +63,25 @@ Public Function getSourceDir(fullWorkbookPath As String, createIfNotExists As Bo
         Exit Function
     End If
 
-    Dim fso As New Scripting.FileSystemObject
+    Dim FSO As New Scripting.FileSystemObject
     Dim projDir As String
-    projDir = fso.GetParentFolderName(fullWorkbookPath) & "\"
+    projDir = FSO.GetParentFolderName(fullWorkbookPath) & "\"
     Dim srcDir As String
     srcDir = projDir & "src\"
     Dim exportDir As String
-    exportDir = srcDir & fso.GetFileName(fullWorkbookPath) & "\"
+    exportDir = srcDir & FSO.GetFileName(fullWorkbookPath) & "\"
 
     If createIfNotExists Then
-        If Not fso.FolderExists(srcDir) Then
-            fso.CreateFolder srcDir
+        If Not FSO.FolderExists(srcDir) Then
+            FSO.CreateFolder srcDir
             Debug.Print "Created Folder " & srcDir
         End If
-        If Not fso.FolderExists(exportDir) Then
-            fso.CreateFolder exportDir
+        If Not FSO.FolderExists(exportDir) Then
+            FSO.CreateFolder exportDir
             Debug.Print "Created Folder " & exportDir
         End If
     Else
-        If Not fso.FolderExists(exportDir) Then
+        If Not FSO.FolderExists(exportDir) Then
             Debug.Print "Folder does not exist: " & exportDir
             exportDir = ""
         End If
@@ -155,9 +155,9 @@ Private Sub exportLines(exportPath As String, component As VBComponent)
     fileName = exportPath & "\" & component.name & extension
     Debug.Print "exporting " & component.name & extension
     'component.Export exportPath & "\" & component.name & extension
-    Dim fso As New Scripting.FileSystemObject
+    Dim FSO As New Scripting.FileSystemObject
     Dim outStream As TextStream
-    Set outStream = fso.CreateTextFile(fileName, True, False)
+    Set outStream = FSO.CreateTextFile(fileName, True, False)
     outStream.Write (component.codeModule.lines(1, component.codeModule.CountOfLines))
     outStream.Close
 End Sub
@@ -189,9 +189,9 @@ Public Sub importVbaCode(vbaProject As VBProject)
     Set sheetsToImport = New Dictionary
     Set vbaProjectToImport = vbaProject
 
-    Dim fso As New Scripting.FileSystemObject
+    Dim FSO As New Scripting.FileSystemObject
     Dim projContents As Folder
-    Set projContents = fso.GetFolder(export_path)
+    Set projContents = FSO.GetFolder(export_path)
     Dim file As Object
     For Each file In projContents.Files()
         'check if and how to import the file
@@ -217,7 +217,7 @@ Private Sub checkHowToImport(file As Object)
     Dim fileName As String
     fileName = file.name
     Dim componentName As String
-    componentName = left(fileName, InStr(fileName, ".") - 1)
+    componentName = Left(fileName, InStr(fileName, ".") - 1)
     If componentName = "Build" Then
         '"don't remove or import ourself
         Exit Sub
@@ -225,10 +225,10 @@ Private Sub checkHowToImport(file As Object)
 
     If Len(fileName) > 4 Then
         Dim lastPart As String
-        lastPart = right(fileName, 4)
+        lastPart = Right(fileName, 4)
         Select Case lastPart
             Case ".cls" ' 10 == Len(".sheet.cls")
-                If Len(fileName) > 10 And right(fileName, 10) = ".sheet.cls" Then
+                If Len(fileName) > 10 And Right(fileName, 10) = ".sheet.cls" Then
                     'import lines into sheet: importLines vbaProjectToImport, file
                     sheetsToImport.Add componentName, file
                 Else
@@ -291,7 +291,7 @@ End Sub
 
 Private Sub importLines(vbaProject As VBProject, file As Object)
     Dim componentName As String
-    componentName = left(file.name, InStr(file.name, ".") - 1)
+    componentName = Left(file.name, InStr(file.name, ".") - 1)
     Dim c As VBComponent
     If Not componentExists(vbaProject, componentName) Then
         ' Create a sheet to import this code into. We cannot set the ws.codeName property which is read-only,

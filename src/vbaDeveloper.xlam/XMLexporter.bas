@@ -8,6 +8,8 @@ Sub test_unpackXML()
 End Sub
 
 Public Sub unpackXML(fileShortName As String)
+'This unpacks the most recently saved version of the file that is passed as an argument.
+'It's necessary for the file to be currently open; calling function should (if appropriate) ask the user if they want to save before executing so that the version on the hard drive is the most recent.
 
 Dim fileName As String, exportPath As String, exportPathXML As String
 fileName = Workbooks(fileShortName).FullName
@@ -58,8 +60,6 @@ Sub Unzip(Fname As Variant, DefPath As String)
         Set oApp = CreateObject("Shell.Application")
         oApp.Namespace("" & FileNameFolder).CopyHere oApp.Namespace("" & Fname).Items 'The ""&  is to address a bug - for some reason VBA doesn't like to use the passed strings in this situation. Found discussion on this here: http://forums.codeguru.com/showthread.php?443782-CreateObject(-quot-Shell-Application-quot-)-Error
 
-        MsgBox "You find the files here: " & FileNameFolder
-
         On Error Resume Next
         Set FSO = CreateObject("scripting.filesystemobject")
         FSO.DeleteFolder Environ("Temp") & "\Temporary Directory*", True
@@ -92,14 +92,14 @@ Sub Clear_All_Files_And_SubFolders_In_Folder(MyPath As String)
 End Sub
 
 Sub test_rebuildXML()
-Dim destinationFileName As String, containingFolderName As String, errorFlag As Boolean, errorMessage As String
+Dim destinationFolder As String, containingFolderName As String, errorFlag As Boolean, errorMessage As String
 destinationFolder = "C:\_files\Git\vbaDeveloper"
 containingFolderName = "C:\_files\Git\vbaDeveloper\src\tempDevFile.xlsm"
 errorFlag = False
 
 Call rebuildXML(destinationFolder, containingFolderName, errorFlag, errorMessage)
 
-If errorFlag = False Then
+If errorFlag = True Then
     MsgBox ("Uh oh, didn't work")
 Else
     MsgBox ("Done!")
@@ -109,14 +109,17 @@ End Sub
 
 Sub rebuildXML(destinationFolder As String, containingFolderName As String, errorFlag As Boolean, errorMessage As String)
 
-'input format cleanup
-If Right(containingFolderName, 1) <> "\" Then
-    containingFolderName = containingFolderName & "\"
+'input format cleanup - containing folder name should not have trailing "\"
+If Right(containingFolderName, 1) = "\" Then
+    containingFolderName = Left(containingFolderName, Len(containingFolderName) - 1)
+End If
+If Right(destinationFolder, 1) = "\" Then
+    destinationFolder = Left(destinationFolder, Len(destinationFolder) - 1)
 End If
 
 'Make sure that the containingFolderName has an XML subfolder
 Dim xmlFolderName As String
-xmlFolderName = containingFolderName & XML_FOLDER_NAME
+xmlFolderName = containingFolderName & "\" & XML_FOLDER_NAME
 Set FSO = CreateObject("scripting.filesystemobject")
 If FSO.FolderExists(xmlFolderName) = False Then
     errorMessage = "We couldn't find XML data in that folder!"
@@ -126,17 +129,28 @@ End If
 
 'Set what some items should be named
 Dim fileExtension As String, strDate As String, fileShortName As String, fileName As String, zipFileName As String
-strDate = format(Now, " yyyy-mm-dd hh-mm-ss")
-fileExtension = "." & Right(containingFolderName, Len(containingFolderName) - InStrRev(containingFolderName, "."))
-fileShortName = "tempDevFile" 'TODO need to parse the containingFolderName here using logic
-fileName = containingFolderName & fileShortName & "-rebuilt" & strDate & fileExtension
+strDate = VBA.format(Now, " yyyy-mm-dd hh-mm-ss")
+fileExtension = "." & Right(containingFolderName, Len(containingFolderName) - InStrRev(containingFolderName, "."))  'The containing folder is the folder that is under \src and that is named the same thing as the target file (folder is filename.xlsx) - can parse file ending out of folder
+fileShortName = Right(containingFolderName, Len(containingFolderName) - InStrRev(containingFolderName, "\"))        'This should be just the final folder name
+fileShortName = Left(fileShortName, Len(fileShortName) - (Len(fileShortName) - InStr(fileShortName, ".")) - 1)                            'remove the extension, since we've saved that separately.
+fileName = destinationFolder & "\" & fileShortName & "-rebuilt" & strDate & fileExtension
 
-zipFileName = containingFolderName & TEMP_ZIP_NAME
+zipFileName = containingFolderName & "\" & TEMP_ZIP_NAME
 
+'Make sure we're not accidentally overwriting anything - this should be rare
+If FSO.FileExists(zipFileName) Then
+    errorMessage = "There is already a file named " & TEMP_ZIP_NAME & " in the folder " & containingFolderName & ". This file needs to be removed before continuing."
+    errorFlag = True
+    Exit Sub
+End If
+    
 'Zip the folder into the FileNameZip
-'Rename the zipFileName to be the fileName (this effectively removes the zip file)
+Call Zip_All_Files_in_Folder(xmlFolderName, zipFileName)
 
+'Rename the zipFileName to be the fileName (this effectively removes the zip file)
+Name zipFileName As fileName
 errorFlag = False
+
 End Sub
 
 
@@ -145,29 +159,21 @@ Sub Zip_All_Files_in_Folder(FolderName As Variant, FileNameZip As Variant)
 'Code modified from example found here: http://www.rondebruin.nl/win/s7/win001.htm
     Dim strDate As String, DefPath As String
     Dim oApp As Object
-
-    DefPath = Application.DefaultFilePath
-    If Right(DefPath, 1) <> "\" Then
-        DefPath = DefPath & "\"
-    End If
-
-
+    
     'Create empty Zip File
     NewZip (FileNameZip)
 
     Set oApp = CreateObject("Shell.Application")
     'Copy the files to the compressed folder
-    oApp.Namespace(FileNameZip).CopyHere oApp.Namespace(FolderName).Items
+    oApp.Namespace("" & FileNameZip).CopyHere oApp.Namespace("" & FolderName).Items             '""& added due to bug in VBA
 
     'Keep script waiting until Compressing is done
     On Error Resume Next
-    Do Until oApp.Namespace(FileNameZip).Items.Count = _
-       oApp.Namespace(FolderName).Items.Count
+    Do Until oApp.Namespace("" & FileNameZip).Items.Count = _
+       oApp.Namespace("" & FolderName).Items.Count
         Application.Wait (Now + TimeValue("0:00:01"))
     Loop
     On Error GoTo 0
-
-    MsgBox "You find the zipfile here: " & FileNameZip
 End Sub
 
 Sub NewZip(sPath)

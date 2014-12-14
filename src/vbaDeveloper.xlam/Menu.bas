@@ -1,7 +1,8 @@
 Attribute VB_Name = "Menu"
 Option Explicit
 
-Private Const MENU_TITLE = "VbaDeveloper"
+Private Const MENU_TITLE = "VBA Code Import-Export"
+Private Const XML_MENU_TITLE = "XML Import-Export"
 
 Public Sub createMenu()
     Dim rootMenu As CommandBarPopup
@@ -11,7 +12,6 @@ Public Sub createMenu()
     Before:=10, _
     Temporary:=True)
     rootMenu.caption = MENU_TITLE
-
 
     Dim exSubMenu As CommandBarPopup
     Dim imSubMenu As CommandBarPopup
@@ -35,18 +35,35 @@ Public Sub createMenu()
         projectName = project.name
         Dim caption As String
         caption = projectName & " (" & Dir(project.fileName) & ")" '<- this can throw error
-        Dim exCommand As String
-        Dim imCommand As String
-        Dim formatCommand As String
+        
+        Dim exCommand As String, imCommand As String, formatCommand As String
         exCommand = "'Menu.exportVbProject """ & projectName & """'"
         imCommand = "'Menu.importVbProject """ & projectName & """'"
         formatCommand = "'Menu.formatVbProject """ & projectName & """'"
+        
         addMenuItem exSubMenu, exCommand, caption
         addMenuItem imSubMenu, imCommand, caption
         addMenuItem formatSubMenu, formatCommand, caption
 nextProject:
     Next vProject
     On Error GoTo 0 'reset the error handling
+    
+    'Add menu items for creating and rebuilding XML files
+    Dim xmlMenu As CommandBarPopup, exXmlSubMenu As CommandBarPopup
+    Set xmlMenu = Application.CommandBars(1).Controls.Add(Type:=msoControlPopup, _
+    Before:=10, _
+    Temporary:=True)
+    xmlMenu.caption = XML_MENU_TITLE
+    
+    Set exXmlSubMenu = addSubmenu(xmlMenu, 1, "Export XML for ...")
+    Dim rebuildButton As CommandBarButton
+    Set rebuildButton = addMenuItem(xmlMenu, "Menu.rebuildXML", "Rebuild a file")
+    rebuildButton.FaceId = 35
+    
+    Dim fileName As String
+    fileName = "tempDevFile.xlsm"
+    Call addMenuItem(exXmlSubMenu, "'Menu.exportXML """ & fileName & """'", fileName)
+    
 End Sub
 
 
@@ -77,6 +94,7 @@ End Sub
 Public Sub deleteMenu()
     On Error Resume Next
     Application.CommandBars(1).Controls(MENU_TITLE).Delete
+    Application.CommandBars(1).Controls(XML_MENU_TITLE).Delete
     On Error GoTo 0
 End Sub
 
@@ -135,4 +153,30 @@ Public Sub formatVbProject(ByVal projectName As String)
     Exit Sub
 formatVbProject_Error:
     ErrorHandling.handleError "Menu.formatVbProject"
+End Sub
+
+Public Sub exportXML(ByVal fileShortName As String)
+    'Ask them if they want to save the file first. Warn that existing files could be overwritten. Default to 'Cancel'
+    'TODO
+    
+    Call unpackXML(fileShortName)
+    MsgBox ("File successfully exported to XML. Check the 'src' folder where the file is saved.")
+End Sub
+
+Public Sub rebuildXML()
+    'TODO - need to add folderbrowser
+    Dim destinationFolder As String, containingFolderName As String, errorFlag As Boolean, errorMessage As String
+    destinationFolder = "C:\_files\Git\vbaDeveloper"
+    containingFolderName = "C:\_files\Git\vbaDeveloper\src\tempDevFile.xlsm"
+    errorFlag = False
+
+    Call XMLexporter.rebuildXML(destinationFolder, containingFolderName, errorFlag, errorMessage)
+    
+    'Improve these messages
+    If errorFlag = True Then
+        MsgBox ("Uh oh, didn't work")
+    Else
+        MsgBox ("Done!")
+    End If
+
 End Sub

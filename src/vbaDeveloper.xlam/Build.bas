@@ -19,6 +19,8 @@ Attribute VB_Name = "Build"
 
 Option Explicit
 
+Public Const AUTO_SAVE = "No" 'Change to yes if you want the add-in to autosave
+
 Private Const IMPORT_DELAY As String = "00:00:03"
 
 'We need to make these variables public such that they can be read by application.ontime

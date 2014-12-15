@@ -45,10 +45,7 @@ Sub Unzip(Fname As Variant, DefPath As String)
     If Fname = False Then
         'Do nothing
     Else
-        If Right(DefPath, 1) <> "\" Then
-            DefPath = DefPath & "\"
-        End If
-
+        DefPath = addSlash(DefPath)
         FileNameFolder = DefPath
 
         'Delete all the files in the folder DefPath first if you want
@@ -100,7 +97,7 @@ Sub test_rebuildXML()
     Call rebuildXML(destinationFolder, containingFolderName, errorFlag, errorMessage)
 
     If errorFlag = True Then
-        MsgBox ("Uh oh, didn't work")
+        MsgBox (errorMessage)
     Else
         MsgBox ("Done!")
     End If
@@ -110,19 +107,15 @@ End Sub
 Public Sub rebuildXML(destinationFolder As String, containingFolderName As String, errorFlag As Boolean, errorMessage As String)
 
     'input format cleanup - containing folder name should not have trailing "\"
-    If Right(containingFolderName, 1) = "\" Then
-        containingFolderName = Left(containingFolderName, Len(containingFolderName) - 1)
-    End If
-    If Right(destinationFolder, 1) = "\" Then
-        destinationFolder = Left(destinationFolder, Len(destinationFolder) - 1)
-    End If
+    containingFolderName = removeSlash(containingFolderName)
+    destinationFolder = removeSlash(destinationFolder)
 
     'Make sure that the containingFolderName has an XML subfolder
     Dim xmlFolderName As String
     xmlFolderName = containingFolderName & "\" & XML_FOLDER_NAME
     Set FSO = CreateObject("scripting.filesystemobject")
     If FSO.FolderExists(xmlFolderName) = False Then
-        errorMessage = "We couldn't find XML data in that folder!"
+        errorMessage = "We couldn't find XML data in that folder. Make sure you pick the folder under /src that is named the same as the Excel to be rebuilt, and that it contains XML data."
         errorFlag = True
         Exit Sub
     End If
@@ -184,3 +177,16 @@ Sub NewZip(sPath)
     Print #1, Chr$(80) & Chr$(75) & Chr$(5) & Chr$(6) & String(18, 0)
     Close #1
 End Sub
+
+Function removeSlash(strFolder) As String
+    If Right(strFolder, 1) = "\" Then
+        strFolder = Left(strFolder, Len(strFolder) - 1)
+    End If
+    removeSlash = strFolder
+End Function
+Function addSlash(strFolder) As String
+    If Right(strFolder, 1) <> "\" Then
+        strFolder = strFolder & "\"
+    End If
+    removeSlash = strFolder
+End Function
